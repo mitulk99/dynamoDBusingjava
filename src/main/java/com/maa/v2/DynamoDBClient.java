@@ -7,6 +7,7 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Scanner;
 
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.PropertiesCredentials;
@@ -114,7 +115,6 @@ public class DynamoDBClient {
 
 	public void listTables() {
 		logMessage("Listing tables");
-		// Initial value for the first page of table names.
 		String lastEvaluatedTableName = null;
 		do {
 
@@ -185,21 +185,6 @@ public class DynamoDBClient {
 		item.clear();
 
 		
-
-//		item.put("Id", new AttributeValue().withN("205"));
-//		item.put("Title", new AttributeValue().withS("20-Bike-205"));
-//		item.put("Description", new AttributeValue().withS("205 Description"));
-//		item.put("BicycleType", new AttributeValue().withS("Hybrid"));
-//		item.put("Brand", new AttributeValue().withS("Brand-Company C"));
-//		item.put("Price", new AttributeValue().withN("500"));
-//		item.put("Gender", new AttributeValue().withS("B")); // Boy's
-//		item.put("Color",
-//				new AttributeValue().withSS(Arrays.asList("Red", "Black")));
-//		item.put("ProductCategory", new AttributeValue().withS("Bicycle"));
-//
-//		itemRequest = new PutItemRequest().withTableName(tableName).withItem(
-//				item);
-//		client.putItem(itemRequest);
 	}
 
 	
@@ -209,9 +194,6 @@ public class DynamoDBClient {
 		HashMap<String, AttributeValue> key = new HashMap<String, AttributeValue>();
 		key.put("Id", new AttributeValue().withN("2"));
 
-//		expectedValues.put("Gender", new ExpectedAttributeValue()
-//				.withValue(new AttributeValue().withS("B")));
-
 		ReturnValue returnValues = ReturnValue.ALL_OLD;
 
 		DeleteItemRequest deleteItemRequest = new DeleteItemRequest()
@@ -219,8 +201,6 @@ public class DynamoDBClient {
 				.withExpected(expectedValues).withReturnValues(returnValues);
 
 		DeleteItemResult result = client.deleteItem(deleteItemRequest);
-
-		// Check the response.
 		logMessage("Printing item that was deleted...");
 		printItem(result.getAttributes());
 		
@@ -254,7 +234,6 @@ public class DynamoDBClient {
 
 		HashMap<String, AttributeValue> key = new HashMap<String, AttributeValue>();
 		key.put("Id", new AttributeValue().withN(k));
-		// Add two new authors to the list.
 		updateItems
 				.put("Lat",
 						new AttributeValueUpdate().withValue(
@@ -273,25 +252,43 @@ public class DynamoDBClient {
 		UpdateItemResult result = client.updateItem(updateItemRequest);
 
 		// Check the response.
-		logMessage("Printing item after attribute update...");
-		printItem(result.getAttributes());
+//		logMessage("Printing item after attribute update...");
+//		printItem(result.getAttributes());
 	}
-//	public void ConvertItems() {
-//		//logMessage("List all items");
-//		ScanRequest scanRequest = new ScanRequest().withTableName(tableName);
-//
-//		ScanResult result = client.scan(scanRequest);
-//		for (Map<String, AttributeValue> item : result.getItems()) {
-//			String pc=item.get("pincode").getS();
-//			Coords API=new Coords();
-//			AttributeValue newValue= new AttributeValue().withS(API.Lat(pc));
-//			item.replace("Lat", newValue);
-//			//System.out.println(item.get("Lat").getS());
-//			AttributeValue newValue1= new AttributeValue().withS(API.Long(pc));
-//			item.replace("Lon", newValue1);
-//			//System.out.println(item.get("Lon").getS());
-//		}
-//	}
+	public void findQuery(Double radius,String pincode)
+	{
+		
+		ScanRequest scanRequest = new ScanRequest().withTableName(tableName);
+		Coords API=new Coords();
+		Double lat1=Double.valueOf(API.Lat(pincode));
+		Double lon1=Double.valueOf(API.Long(pincode));
+		ScanResult result = client.scan(scanRequest);
+		for (Map<String, AttributeValue> item : result.getItems()) {
+			Double lat2=Double.valueOf(item.get("Lat").getS());
+			Double lon2=Double.valueOf(item.get("Lon").getS());
+			Double ans=distance(lat1,lat2,lon1,lon2);
+			if(ans<=radius)
+			{
+				printItem(item);
+			}
+		}
+	}
+	public Double distance(Double lat1,Double lat2,Double lon1,Double lon2)
+	{
+		lon1 = Math.toRadians(lon1); 
+		lon2 = Math.toRadians(lon2); 
+		lat1 = Math.toRadians(lat1); 
+		lat2 = Math.toRadians(lat2); 
+		double dlon = lon2 - lon1; 
+		double dlat = lat2 - lat1; 
+		double a = Math.pow(Math.sin(dlat / 2), 2) 
+				+ Math.cos(lat1) * Math.cos(lat2) 
+				* Math.pow(Math.sin(dlon / 2),2); 
+			
+		double c = 2 * Math.asin(Math.sqrt(a)); 
+		double r = 6371;
+		return(c * r); 
+	}
 	private void printItem(Map<String, AttributeValue> attributeList) {
 		String itemString = new String();
 		for (Map.Entry<String, AttributeValue> item : attributeList.entrySet()) {
@@ -319,21 +316,27 @@ public class DynamoDBClient {
 		try {
 			DynamoDBClient dbClient = new DynamoDBClient();
 
-			dbClient.createTable();
-			while (!"ACTIVE".equalsIgnoreCase(dbClient.getTableStatus())) {
-				logMessage("Waiting for table being created. Sleeping 10 seconds");
-				Thread.sleep(10000);
-			}
+//			dbClient.createTable();
+//			while (!"ACTIVE".equalsIgnoreCase(dbClient.getTableStatus())) {
+//				logMessage("Waiting for table being created. Sleeping 10 seconds");
+//				Thread.sleep(10000);
+//			}
 			//dbClient.describeTable();
 
-			dbClient.putItems();
-			//dbClient.ConvertItems();
-			dbClient.listItems();
-			dbClient.UI();
-			dbClient.listItems();
-			//dbClient.updateItem();
+			//dbClient.putItems();
+			//dbClient.listItems();
+		//	dbClient.UI();
+		//	dbClient.listItems();
 			//dbClient.deleteItem();
-
+			Scanner in =new Scanner(System.in);
+			System.out.println("Put in the radius : ");
+			Double radius;
+			radius=in.nextDouble();
+			System.out.println("Enter your pincode : ");
+			String pincode;
+			pincode=in.next();
+			System.out.println("Ready to go!!");
+			dbClient.findQuery(radius, pincode);
 		//	dbClient.updateTable();
 //			while ("UPDATING".equalsIgnoreCase(dbClient.getTableStatus())) {
 //				logMessage("Waiting for table being updated. Sleeping 10 seconds");
@@ -350,7 +353,7 @@ public class DynamoDBClient {
 //			} catch (ResourceNotFoundException e) {
 //			}
 			//dbClient.listTables();
-
+			in.close();
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
